@@ -164,6 +164,46 @@ def draw_subject_quality():
     )
     return scatter
 
+def draw_break_circle_subject():
+    """新增图10：破圈视频分区分布占比"""
+    df = read_data("break_circle_subject.csv").head(10)
+    pie = (
+        Pie(init_opts=opts.InitOpts(theme=ThemeType.WESTEROS))
+        .add("破圈次数", [(str(k), int(v)) for k, v in zip(df['tname'], df['count'])], 
+             radius=["40%", "70%"])
+        .set_global_opts(title_opts=opts.TitleOpts(title="破圈视频(Label=1)分区分布"),
+                         legend_opts=opts.LegendOpts(orient="vertical", pos_left="2%", pos_top="20%"))
+        .set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}次"))
+    )
+    return pie
+
+def draw_coin_like_ratio():
+    """新增图11：各分区投币点赞比(干货度)"""
+    df = read_data("coin_like_ratio_by_subject.csv").head(10).iloc[::-1]
+    bar = (
+        Bar(init_opts=opts.InitOpts(theme=ThemeType.CHALK))
+        .add_xaxis([str(x) for x in df['tname'].tolist()])
+        .add_yaxis("投币点赞比", [float(x) for x in df['coin_like_ratio'].tolist()])
+        .reversal_axis()
+        .set_series_opts(label_opts=opts.LabelOpts(position="right"))
+        .set_global_opts(title_opts=opts.TitleOpts(title="各分区干货程度 (投币数/点赞数)"))
+    )
+    return bar
+
+def draw_rf_feature_importance():
+    """新增图12：随机森林特征重要性"""
+    # 从 static 文件夹读取特征重要性
+    df = read_data("rf_feature_importance.csv", STATIC_DIR).head(10).iloc[::-1]
+    bar = (
+        Bar(init_opts=opts.InitOpts(theme=ThemeType.MACARONS))
+        .add_xaxis([str(x) for x in df['feature'].tolist()])
+        .add_yaxis("重要性权重", [round(float(x), 4) for x in df['importance'].tolist()])
+        .reversal_axis()
+        .set_series_opts(label_opts=opts.LabelOpts(position="right"))
+        .set_global_opts(title_opts=opts.TitleOpts(title="决定视频破圈与上榜的核心特征"))
+    )
+    return bar
+
 def main():
     print("[INFO] 开始生成可视化数据大屏...")
     page = Page(layout=Page.DraggablePageLayout)
@@ -176,7 +216,10 @@ def main():
         draw_corr_heatmap(),
         draw_popular_up(),
         draw_radar_comparison(),
-        draw_subject_quality()
+        draw_subject_quality(),
+        draw_break_circle_subject(),
+        draw_coin_like_ratio(),
+        draw_rf_feature_importance()
     )
     page.render(REPORT_HTML)
     print(f"[SUCCESS] 交互式大屏已生成！文件路径: {os.path.abspath(REPORT_HTML)}")
