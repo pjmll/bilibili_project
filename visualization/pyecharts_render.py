@@ -87,6 +87,8 @@ def draw_model_comparison():
 def draw_corr_heatmap():
     """图6：互相关热力图"""
     df = read_data("cor_matrix.csv", STATIC_DIR)
+    if 'Unnamed: 0' in df.columns:
+        df = df.set_index('Unnamed: 0')
     features = [str(c) for c in df.columns]
     data = [[i, j, float(round(df.iloc[i, j], 2))] for i in range(len(features)) for j in range(len(features))]
     heat = (
