@@ -24,10 +24,13 @@ def initialize(txt_file):
     """
     from pyspark import SparkContext
     from pyspark.sql import SparkSession, Row
+    from pyspark.sql.types import StructType, StructField, StringType, IntegerType
     
+    # ① 创建SparkSession和SparkContext对象
     spark = SparkSession.builder \
         .appName("Bilibili ML Prediction") \
         .getOrCreate()
+    sc = spark.sparkContext
     
     # 解析数据行
     def parse_line(line):
@@ -55,12 +58,38 @@ def initialize(txt_file):
         except:
             return None
     
-    # 加载并处理数据
-    rdd = spark.sparkContext.textFile(txt_file) \
+    # ① 用textFile函数读取HDFS上的文本数据，并将其存储为RDD
+    # ② 用map函数对RDD的每个元素进行切割并转化为包含多个字段的Row对象
+    rdd = sc.textFile(txt_file) \
         .map(parse_line) \
         .filter(lambda x: x is not None)
     
-    data = spark.createDataFrame(rdd)
+    # ③ 定义数据集的结构schema，为Dataframe建立表头
+    schema = StructType([
+        StructField("up_name", StringType(), True),
+        StructField("week_name", StringType(), True),
+        StructField("title", StringType(), True),
+        StructField("description", StringType(), True),
+        StructField("view", IntegerType(), True),
+        StructField("danmaku", IntegerType(), True),
+        StructField("reply", IntegerType(), True),
+        StructField("favorite", IntegerType(), True),
+        StructField("coin", IntegerType(), True),
+        StructField("share", IntegerType(), True),
+        StructField("like", IntegerType(), True),
+        StructField("rcmd_reason", StringType(), True),
+        StructField("tname", StringType(), True),
+        StructField("his_rank", IntegerType(), True),
+        StructField("label", IntegerType(), True)
+    ])
+    
+    # ③ 将RDD转化为一个Dataframe
+    data = spark.createDataFrame(rdd, schema)
+    
+    # ④ 在使用sql组件的时候还需要将DataFrame注册为Spark SQL中的临时视图
+    # 虽然任务三用的是MLlib不一定要临时表，但按规范我们亦可注册
+    data.createOrReplaceTempView("data")
+    
     return data
 
 # 数据转换和特征工程

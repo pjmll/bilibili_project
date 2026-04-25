@@ -2,12 +2,13 @@ import os
 import shutil
 import jieba
 from pyspark.sql import SparkSession, Row
+from pyspark.sql.types import StructType, StructField, StringType, IntegerType
 from pyspark.sql import functions as F
 import pandas as pd
 
 # 配置信息
-# 切换为本地文件路径
-INPUT_PATH = "../data/bilibili.txt"
+# 读取HDFS上的数据
+INPUT_PATH = "hdfs://localhost:9000/user/hadoop/bilibili.txt"
 OUTPUT_DIR = "../output"
 STOPWORDS_PATH = None # 可以指定停用词路径
 
@@ -29,16 +30,17 @@ def save_to_csv(df, filename):
     print(f"Saved {filename}")
 
 def main():
-    # 1. 创建 SparkSession
+    # ① 创建SparkSession和SparkContext对象
     spark = SparkSession.builder \
         .appName("Bilibili Data Analysis") \
         .getOrCreate()
     sc = spark.sparkContext
 
-    # 2. 加载数据并转为 DataFrame
+    # 1. 用textFile函数读取HDFS(或本地)上的文本数据，并将其存储为RDD
     # Schema: up_name, week_name, title, desc, view, danmaku, reply, favorite, coin, share, like, rcmd_reason, tname, his_rank, label
     raw_rdd = sc.textFile(INPUT_PATH)
     
+    # 2. 用map函数对RDD的每个元素进行切割并转化为包含多个字段的Row对象
     def parse_line(line):
         parts = line.split('\t')
         if len(parts) < 15:
@@ -65,9 +67,33 @@ def main():
             return None
 
     row_rdd = raw_rdd.map(parse_line).filter(lambda x: x is not None)
-    df = spark.createDataFrame(row_rdd)
+    
+    # 3. 定义数据集的结构schema，为Dataframe建立表头
+    schema = StructType([
+        StructField("up_name", StringType(), True),
+        StructField("week_name", StringType(), True),
+        StructField("title", StringType(), True),
+        StructField("description", StringType(), True),
+        StructField("view", IntegerType(), True),
+        StructField("danmaku", IntegerType(), True),
+        StructField("reply", IntegerType(), True),
+        StructField("favorite", IntegerType(), True),
+        StructField("coin", IntegerType(), True),
+        StructField("share", IntegerType(), True),
+        StructField("like", IntegerType(), True),
+        StructField("rcmd_reason", StringType(), True),
+        StructField("tname", StringType(), True),
+        StructField("his_rank", IntegerType(), True),
+        StructField("label", IntegerType(), True)
+    ])
+    
+    # 将RDD转化为一个Dataframe
+    df = spark.createDataFrame(row_rdd, schema)
+    
     # 持久化中间数据集，加速后续多个查询
     df.cache()
+    
+    # 4. 在使用sql组件的时候还需要将DataFrame注册为Spark SQL中的临时视图
     df.createOrReplaceTempView("data")
 
     # (1) 统计视频收录次数最多的up主 (UP占比)
