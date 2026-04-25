@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-BÕ¾¡¶Ã¿ÖÜ±Ø¿´¡·ÊÓÆµÓëupÖ÷Êý¾ÝµÄ´óÊý¾Ý·ÖÎöÈÎÎñ - ÈÎÎñ3
-Ê¹ÓÃSpark MLlib½øÐÐ»úÆ÷Ñ§Ï°·ÖÀàÔ¤²â
+B站《每周必看》视频与up主数据的大数据分析任务 - 任务3
+使用Spark MLlib进行机器学习分类预测
 """
 
 import os
@@ -17,10 +17,10 @@ def ensure_dir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
-# ³õÊ¼»¯Spark²¢¼ÓÔØÊý¾Ý
+# 初始化Spark并加载数据
 def initialize(txt_file):
     """
-    ³õÊ¼»¯Spark²¢¼ÓÔØÊý¾Ý
+    初始化Spark并加载数据
     """
     from pyspark import SparkContext
     from pyspark.sql import SparkSession, Row
@@ -29,7 +29,7 @@ def initialize(txt_file):
         .appName("Bilibili ML Prediction") \
         .getOrCreate()
     
-    # ½âÎöÊý¾ÝÐÐ
+    # 解析数据行
     def parse_line(line):
         parts = line.split('\t')
         if len(parts) < 15:
@@ -55,7 +55,7 @@ def initialize(txt_file):
         except:
             return None
     
-    # ¼ÓÔØ²¢´¦ÀíÊý¾Ý
+    # 加载并处理数据
     rdd = spark.sparkContext.textFile(txt_file) \
         .map(parse_line) \
         .filter(lambda x: x is not None)
@@ -63,24 +63,24 @@ def initialize(txt_file):
     data = spark.createDataFrame(rdd)
     return data
 
-# Êý¾Ý×ª»»ºÍÌØÕ÷¹¤³Ì
+# 数据转换和特征工程
 def transform_data(df):
     """
-    Êý¾Ý×ª»»ºÍÌØÕ÷¹¤³Ì
+    数据转换和特征工程
     """
     from pyspark.sql.functions import col, round
     from pyspark.ml.feature import VectorAssembler
     
-    # ¼ÆËã»¥¶¯ÂÊµÈÑÜÉúÌØÕ÷
+    # 计算互动率等衍生特征
     df = df.withColumn('interact_rate', \
                        round((col('like') + col('coin') + col('favorite') + col('share') + col('reply')) / col('view'), 4))
     df = df.withColumn('like_rate', round(col('like') / col('view'), 4))
     df = df.withColumn('coin_rate', round(col('coin') / col('view'), 4))
     
-    # Ñ¡ÔñÌØÕ÷ÁÐ
+    # 选择特征列
     required_features = ['view', 'danmaku', 'reply', 'favorite', 'coin', 'share', 'like', 'interact_rate', 'like_rate', 'coin_rate']
     
-    # ¹¹½¨ÌØÕ÷ÏòÁ¿
+    # 构建特征向量
     assembler = VectorAssembler(
         inputCols=required_features,
         outputCol='features')
@@ -108,10 +108,10 @@ def corr_matrix(df, feature_names, cor_save_dir):
     cor_df.to_csv(cor_save_dir, index=True)
     print(f"相关性矩阵已保存到 {cor_save_dir}")
 
-# Âß¼­»Ø¹éÄ£ÐÍ
+# 逻辑回归模型
 def LogisticReg(training_data, test_data):
     """
-    Âß¼­»Ø¹éÄ£ÐÍ
+    逻辑回归模型
     """
     from pyspark.ml.classification import LogisticRegression
     from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
@@ -120,13 +120,13 @@ def LogisticReg(training_data, test_data):
     model = lr.fit(training_data)
     lr_predictions = model.transform(test_data)
     
-    # ¼ÆËã×¼È·ÂÊ
+    # 计算准确率
     multi_evaluator = MulticlassClassificationEvaluator(
         labelCol='label', metricName='accuracy')
     acc = multi_evaluator.evaluate(lr_predictions)
     print('LogisticRegression classifier Accuracy:{:.4f}'.format(acc))
     
-    # ¼ÆËãAUC
+    # 计算AUC
     binary_evaluator = BinaryClassificationEvaluator(rawPredictionCol="rawPrediction", labelCol="label",
         metricName="areaUnderROC")
     auc = binary_evaluator.evaluate(lr_predictions)
@@ -134,10 +134,10 @@ def LogisticReg(training_data, test_data):
     
     return ['LogisticRegression', acc, auc]
 
-# ¾ö²ßÊ÷Ä£ÐÍ
+# 决策树模型
 def DecisionTree(training_data, test_data):
     """
-    ¾ö²ßÊ÷Ä£ÐÍ
+    决策树模型
     """
     from pyspark.ml.classification import DecisionTreeClassifier
     from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
@@ -148,13 +148,13 @@ def DecisionTree(training_data, test_data):
     model = dt.fit(training_data)
     dt_predictions = model.transform(test_data)
     
-    # ¼ÆËã×¼È·ÂÊ
+    # 计算准确率
     multi_evaluator = MulticlassClassificationEvaluator(
         labelCol='label', metricName='accuracy')
     acc = multi_evaluator.evaluate(dt_predictions)
     print('DecisionTree classifier Accuracy:{:.4f}'.format(acc))
     
-    # ¼ÆËãAUC
+    # 计算AUC
     binary_evaluator = BinaryClassificationEvaluator(rawPredictionCol="rawPrediction", labelCol="label",
         metricName="areaUnderROC")
     auc = binary_evaluator.evaluate(dt_predictions)
@@ -247,27 +247,27 @@ def train(df, cor_dir, classifier_comparison_dir):
     rf_res = Randomforest(training_data, test_data, feature_names)
     gbt_res = GBT(training_data, test_data, feature_names)
     
-    # ½«·ÖÀàÆ÷µÄÐÔÄÜ½á¹û±£´æÔÚcsvÎÄ¼þÖÐ
+    # 将分类器的性能结果保存在csv文件中
     classifier_comparison = [log_res, dt_res, rf_res, gbt_res]
     comparison_df = pd.DataFrame(classifier_comparison)
     comparison_df.columns = ['classifier', 'Acc', 'Auc']
     ensure_dir(os.path.dirname(classifier_comparison_dir))
     comparison_df.to_csv(classifier_comparison_dir, index=False)
-    print(f"·ÖÀàÆ÷ÐÔÄÜ½á¹ûÒÑ±£´æµ½ {classifier_comparison_dir}")
+    print(f"分类器性能结果已保存到 {classifier_comparison_dir}")
 
 if __name__ == '__main__':
-    print("BÕ¾¡¶Ã¿ÖÜ±Ø¿´¡·ÊÓÆµÓëupÖ÷Êý¾ÝµÄ´óÊý¾Ý·ÖÎöÈÎÎñ - ÈÎÎñ3")
-    print("Ê¹ÓÃSpark MLlib½øÐÐ»úÆ÷Ñ§Ï°·ÖÀàÔ¤²â")
+    print("B站《每周必看》视频与up主数据的大数据分析任务 - 任务3")
+    print("使用Spark MLlib进行机器学习分类预测")
     
-    # ¼ÓÔØÊý¾Ý
+    # 加载数据
     df = initialize(INPUT_PATH)
-    print(f"Êý¾Ý¼ÓÔØÍê³É£¬¹² {df.count()} Ìõ¼ÇÂ¼")
+    print(f"数据加载完成，共 {df.count()} 条记录")
     
-    # ¶¨ÒåÊä³öÂ·¾¶
+    # 定义输出路径
     cor_save = os.path.join(STATIC_DIR, 'cor_matrix.csv')
     classifier_comparison_dir = os.path.join(STATIC_DIR, 'comparison.csv')
     
-    # ÑµÁ·Ä£ÐÍ
+    # 训练模型
     train(df, cor_save, classifier_comparison_dir)
     
-    print("ÈÎÎñ3Íê³É£ºÊ¹ÓÃSpark MLlib½øÐÐ»úÆ÷Ñ§Ï°·ÖÀàÔ¤²â")
+    print("任务3完成：使用Spark MLlib进行机器学习分类预测")
