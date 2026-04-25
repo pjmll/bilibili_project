@@ -206,6 +206,30 @@ def main():
     """)
     save_to_csv(week_trends, "weekly_performance_trends.csv")
 
+    # (5c) 新增：破圈视频分区分布
+    break_circle_subject = spark.sql("""
+        SELECT tname, count(*) as count 
+        FROM data 
+        WHERE label = 1
+        GROUP BY tname 
+        ORDER BY count DESC 
+        LIMIT 10
+    """)
+    save_to_csv(break_circle_subject, "break_circle_subject.csv")
+
+    # (5d) 新增：点赞投币比 (衡量内容质量/干货程度)
+    coin_like_ratio = spark.sql("""
+        SELECT tname, 
+               round(sum(coin) / sum(like), 4) as coin_like_ratio,
+               count(*) as count
+        FROM data
+        GROUP BY tname
+        HAVING count > 50
+        ORDER BY coin_like_ratio DESC
+        LIMIT 10
+    """)
+    save_to_csv(coin_like_ratio, "coin_like_ratio_by_subject.csv")
+
     # (6) 词频统计 - 分别对正负样本进行标题词频分析
     # 正样本标题词频
     pos_titles = spark.sql("SELECT title FROM data WHERE label = 1")

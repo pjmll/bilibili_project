@@ -86,26 +86,27 @@ def transform_data(df):
         outputCol='features')
     transformed_data = assembler.transform(df)
     
-    # »®·ÖÑµÁ·¼¯ºÍ²âÊÔ¼¯
+    # 划分训练集和测试集
     (training_data, test_data) = transformed_data.randomSplit([0.8, 0.2], seed=2023)
     print("Training data count: " + str(training_data.count()))
     print("Test data count: " + str(test_data.count()))
     
-    return transformed_data, training_data, test_data
+    return transformed_data, training_data, test_data, required_features
 
-# ¼ÆËãÏà¹ØÐÔ¾ØÕó
-def corr_matrix(df, cor_save_dir):
+# 计算相关性矩阵
+def corr_matrix(df, feature_names, cor_save_dir):
     """
-    ¼ÆËãÏà¹ØÐÔ¾ØÕó
+    计算相关性矩阵
     """
     from pyspark.ml.stat import Correlation
     
     cor_mat = Correlation.corr(df, "features", "spearman").head()[0]
     cor_df = pd.DataFrame(cor_mat.toArray())
-    cor_df.columns = ['view', 'danmaku', 'reply', 'favorite', 'coin', 'share', 'like', 'interact_rate', 'like_rate', 'coin_rate']
+    cor_df.columns = feature_names
+    cor_df.index = feature_names
     ensure_dir(os.path.dirname(cor_save_dir))
-    cor_df.to_csv(cor_save_dir, index=False)
-    print(f"Ïà¹ØÐÔ¾ØÕóÒÑ±£´æµ½ {cor_save_dir}")
+    cor_df.to_csv(cor_save_dir, index=True)
+    print(f"相关性矩阵已保存到 {cor_save_dir}")
 
 # Âß¼­»Ø¹éÄ£ÐÍ
 def LogisticReg(training_data, test_data):
@@ -162,9 +163,9 @@ def DecisionTree(training_data, test_data):
     return ['DecisionTree', acc, auc]
 
 # Ëæ»úÉ­ÁÖÄ£ÐÍ
-def Randomforest(training_data, test_data):
+def Randomforest(training_data, test_data, feature_names):
     """
-    Ëæ»úÉ­ÁÖÄ£ÐÍ
+    随机森林模型
     """
     from pyspark.ml.classification import RandomForestClassifier
     from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
@@ -175,24 +176,32 @@ def Randomforest(training_data, test_data):
     model = rf.fit(training_data)
     rf_predictions = model.transform(test_data)
     
-    # ¼ÆËã×¼È·ÂÊ
+    # 计算准确率
     multi_evaluator = MulticlassClassificationEvaluator(
         labelCol='label', metricName='accuracy')
     acc = multi_evaluator.evaluate(rf_predictions)
     print('Random Forest classifier Accuracy:{:.4f}'.format(acc))
     
-    # ¼ÆËãAUC
+    # 计算AUC
     binary_evaluator = BinaryClassificationEvaluator(rawPredictionCol="rawPrediction", labelCol="label",
         metricName="areaUnderROC")
     auc = binary_evaluator.evaluate(rf_predictions)
     print('Random Forest classifier Auc:{:.4f}'.format(auc))
     
+    # 提取特征重要性
+    importancias = model.featureImportances.toArray()
+    feature_importance_df = pd.DataFrame(list(zip(feature_names, importancias)), columns=['feature', 'importance'])
+    feature_importance_df = feature_importance_df.sort_values(by='importance', ascending=False)
+    ensure_dir(STATIC_DIR)
+    feature_importance_df.to_csv(os.path.join(STATIC_DIR, 'rf_feature_importance.csv'), index=False)
+    print(f"随机森林特征重要性已保存到 {os.path.join(STATIC_DIR, 'rf_feature_importance.csv')}")
+    
     return ['Random Forest', acc, auc]
 
-# GBTÄ£ÐÍ
-def GBT(training_data, test_data):
+# GBT模型
+def GBT(training_data, test_data, feature_names):
     """
-    GBTÄ£ÐÍ
+    GBT模型
     """
     from pyspark.ml.classification import GBTClassifier
     from pyspark.ml.evaluation import MulticlassClassificationEvaluator, BinaryClassificationEvaluator
@@ -201,34 +210,42 @@ def GBT(training_data, test_data):
     model = gb.fit(training_data)
     gb_predictions = model.transform(test_data)
     
-    # ¼ÆËã×¼È·ÂÊ
+    # 计算准确率
     multi_evaluator = MulticlassClassificationEvaluator(labelCol='label', metricName='accuracy')
     acc = multi_evaluator.evaluate(gb_predictions)
     print('GBT classifier Accuracy:{:.4f}'.format(acc))
     
-    # ¼ÆËãAUC
+    # 计算AUC
     binary_evaluator = BinaryClassificationEvaluator(rawPredictionCol="rawPrediction", labelCol="label",
         metricName="areaUnderROC")
     auc = binary_evaluator.evaluate(gb_predictions)
     print('GBT classifier Auc:{:.4f}'.format(auc))
     
+    # 提取特征重要性
+    importancias = model.featureImportances.toArray()
+    feature_importance_df = pd.DataFrame(list(zip(feature_names, importancias)), columns=['feature', 'importance'])
+    feature_importance_df = feature_importance_df.sort_values(by='importance', ascending=False)
+    ensure_dir(STATIC_DIR)
+    feature_importance_df.to_csv(os.path.join(STATIC_DIR, 'gbt_feature_importance.csv'), index=False)
+    print(f"GBT特征重要性已保存到 {os.path.join(STATIC_DIR, 'gbt_feature_importance.csv')}")
+    
     return ['GBT', acc, auc]
 
-# ÑµÁ·ºÍÆÀ¹ÀÄ£ÐÍ
+# 训练和评估模型
 def train(df, cor_dir, classifier_comparison_dir):
     """
-    ÑµÁ·ºÍÆÀ¹ÀÄ£ÐÍ
+    训练和评估模型
     """
-    transformed_data, training_data, test_data = transform_data(df)
+    transformed_data, training_data, test_data, feature_names = transform_data(df)
     
-    # ¼ÆËã±äÁ¿Ö®¼äµÄÏà¹ØÐÔ
-    corr_matrix(transformed_data, cor_dir)
+    # 计算变量之间的相关性
+    corr_matrix(transformed_data, feature_names, cor_dir)
     
-    # Ê¹ÓÃËÄÖÖ·ÖÀàÆ÷½øÐÐ·ÖÀà
+    # 使用四种分类器进行分类
     log_res = LogisticReg(training_data, test_data)
     dt_res = DecisionTree(training_data, test_data)
-    rf_res = Randomforest(training_data, test_data)
-    gbt_res = GBT(training_data, test_data)
+    rf_res = Randomforest(training_data, test_data, feature_names)
+    gbt_res = GBT(training_data, test_data, feature_names)
     
     # ½«·ÖÀàÆ÷µÄÐÔÄÜ½á¹û±£´æÔÚcsvÎÄ¼þÖÐ
     classifier_comparison = [log_res, dt_res, rf_res, gbt_res]
