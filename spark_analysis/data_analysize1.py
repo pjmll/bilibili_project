@@ -7,8 +7,8 @@ import pandas as pd
 
 # 配置信息
 # 切换为本地文件路径
-INPUT_PATH = "file:///home/hadoop/bd_proj/bilibili_project/data/bilibili.txt"
-OUTPUT_DIR = "./output"
+INPUT_PATH = "../data/bilibili.txt"
+OUTPUT_DIR = "../output"
 STOPWORDS_PATH = None # 可以指定停用词路径
 
 def pretty_cut(text):
