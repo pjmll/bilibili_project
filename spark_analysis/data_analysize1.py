@@ -30,7 +30,7 @@ def save_to_csv(df, filename):
     print(f"Saved {filename}")
 
 def main():
-    # ① 创建SparkSession和SparkContext对象
+    # 创建SparkSession和SparkContext对象
     spark = SparkSession.builder \
         .appName("Bilibili Data Analysis") \
         .getOrCreate()
