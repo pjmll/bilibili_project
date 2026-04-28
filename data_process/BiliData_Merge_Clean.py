@@ -22,13 +22,13 @@ from glob import glob
 # ==========================================
 
 def extract_videos_from_api_json(filepath, source_label):
-    """从 B站 API 返回的原始 JSON 中提取标准化的视频列表"""
+    """从B站API返回的原始JSON中提取标准化的视频列表"""
     videos = []
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
 
-            # API 数据的两种常见包裹形式
+            # API数据的两种常见包裹形式
             video_list = []
             if isinstance(data, list):
                 video_list = data
@@ -63,7 +63,7 @@ def extract_videos_from_api_json(filepath, source_label):
                     'data_source': source_label
                 }
 
-                # 处理可能嵌在 dict 里的 rcmd_reason
+                # 处理可能嵌在dict里的rcmd_reason
                 if isinstance(standard_v['rcmd_reason'], dict):
                     standard_v['rcmd_reason'] = standard_v['rcmd_reason'].get('content', '')
 
@@ -76,8 +76,8 @@ def extract_videos_from_api_json(filepath, source_label):
 def merge_positive_samples(input_dir='./data', output_dir='./data'):
     """
     合并多个榜单的正样本数据
-    输入：从爬虫脚本生成的多个 JSON 文件
-    输出：标准化的正样本 JSON 文件
+    输入：从爬虫脚本生成的多个JSON文件
+    输出：标准化的正样本JSON文件
     """
     
     print("="*50)
@@ -95,9 +95,9 @@ def merge_positive_samples(input_dir='./data', output_dir='./data'):
     os.makedirs(os.path.dirname(weekly_out_path), exist_ok=True)
     with open(weekly_out_path, 'w', encoding='utf-8') as f:
         json.dump(weekly_data, f, ensure_ascii=False, indent=4)
-    print(f"  ✓ 《每周必看》合并完成，共 {len(weekly_data)} 条")
+    print(f"《每周必看》合并完成，共 {len(weekly_data)} 条")
 
-    # 任务 2：整合《热门排行榜》（如果存在）
+    # 任务 2：整合《热门排行榜》
     print("\n[1.2] 整合《热门排行榜》数据集...")
     popular_files = glob(os.path.join(input_dir, '热门排行榜', '*.json'))
     popular_data = []
@@ -107,9 +107,9 @@ def merge_positive_samples(input_dir='./data', output_dir='./data'):
     popular_out_path = os.path.join(output_dir, '正样本', '热门排行榜数据集.json')
     with open(popular_out_path, 'w', encoding='utf-8') as f:
         json.dump(popular_data, f, ensure_ascii=False, indent=4)
-    print(f"  ✓ 《热门排行榜》合并完成，共 {len(popular_data)} 条")
+    print(f"《热门排行榜》合并完成，共 {len(popular_data)} 条")
 
-    # 任务 3：整合《入站必刷》（如果存在）
+    # 任务 3：整合《入站必刷》
     print("\n[1.3] 整合《入站必刷》数据集...")
     rcmd_files = glob(os.path.join(input_dir, '入站必刷', '*.json'))
     rcmd_data = []
@@ -119,7 +119,7 @@ def merge_positive_samples(input_dir='./data', output_dir='./data'):
     rcmd_out_path = os.path.join(output_dir, '正样本', '入站必刷数据集.json')
     with open(rcmd_out_path, 'w', encoding='utf-8') as f:
         json.dump(rcmd_data, f, ensure_ascii=False, indent=4)
-    print(f"  ✓ 《入站必刷》合并完成，共 {len(rcmd_data)} 条")
+    print(f"《入站必刷》合并完成，共 {len(rcmd_data)} 条")
 
     return weekly_out_path, popular_out_path, rcmd_out_path
 
@@ -147,7 +147,7 @@ def merge_positive_negative_samples(input_dir='./data', output_dir='./data'):
             data = json.load(fp)
             if isinstance(data, list):
                 positive_data.extend(data)
-            print(f"  ✓ 加载: {os.path.basename(f)} ({len(data)} 条)")
+            print(f"加载: {os.path.basename(f)} ({len(data)} 条)")
 
     # 加载负样本
     negative_file = os.path.join(input_dir, '负样本', '负样本数据集_普通视频.json')
@@ -155,9 +155,9 @@ def merge_positive_negative_samples(input_dir='./data', output_dir='./data'):
     if os.path.exists(negative_file):
         with open(negative_file, 'r', encoding='utf-8') as f:
             negative_data = json.load(f)
-        print(f"  ✓ 加载负样本: {len(negative_data)} 条")
+        print(f"加载负样本: {len(negative_data)} 条")
     else:
-        print(f"  ⚠ 未找到负样本文件")
+        print(f"未找到负样本文件")
 
     # 合并并去重
     all_data = positive_data + negative_data
@@ -177,8 +177,8 @@ def merge_positive_negative_samples(input_dir='./data', output_dir='./data'):
     with open(final_json_path, 'w', encoding='utf-8') as f:
         json.dump(final_unique_list, f, ensure_ascii=False, indent=4)
 
-    print(f"  ✓ 去重完成，保留 {len(final_unique_list)} 条唯一数据")
-    print(f"  ✓ 合并结果保存至: {final_json_path}")
+    print(f"去重完成，保留 {len(final_unique_list)} 条唯一数据")
+    print(f"合并结果保存至: {final_json_path}")
     
     return final_json_path
 
@@ -208,13 +208,13 @@ def preprocess_and_export(input_json_path, output_txt_path='./data/bilibili_week
     print(f"\n[3.1] 读取输入文件: {input_json_path}")
     with open(input_json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    print(f"  ✓ 加载 {len(data)} 条记录")
+    print(f"加载 {len(data)} 条记录")
 
     # 扁平化与标签生成
     print("\n[3.2] 进行数据扁平化与标签映射...")
     flat_data = []
     for item in data:
-        # 动态生成机器学习的 Label：负样本为 0，其他爆款榜单为 1
+        # 动态生成机器学习的Label：负样本为0，其他爆款榜单为1
         label = 0 if item.get('data_source') == 'negative_sample' else 1
 
         flat_item = {
@@ -238,19 +238,19 @@ def preprocess_and_export(input_json_path, output_txt_path='./data/bilibili_week
         flat_data.append(flat_item)
     
     df = pd.DataFrame(flat_data)
-    print(f"  ✓ 扁平化 {len(df)} 条记录")
+    print(f"扁平化 {len(df)} 条记录")
 
     # 去重处理
     print("\n[3.3] 进行去重处理...")
     original_len = len(df)
     df = df.drop_duplicates(subset=['up_name', 'title'], keep='first')
-    print(f"  ✓ 去重前: {original_len} 条，去重后: {len(df)} 条，删除 {original_len - len(df)} 条重复记录")
+    print(f"去重前: {original_len} 条，去重后: {len(df)} 条，删除 {original_len - len(df)} 条重复记录")
 
     # 异常值过滤
     print("\n[3.4] 进行异常值过滤...")
     before_filter = len(df)
     df = df[df['view'] > 0]
-    print(f"  ✓ 过滤播放量≤0的异常记录，删除 {before_filter - len(df)} 条")
+    print(f"过滤播放量≤0的异常记录，删除 {before_filter - len(df)} 条")
 
     # 文本规范化
     print("\n[3.5] 进行文本规范化...")
@@ -266,7 +266,7 @@ def preprocess_and_export(input_json_path, output_txt_path='./data/bilibili_week
     text_columns = ['title', 'desc', 'rcmd_reason']
     for col in text_columns:
         df[col] = df[col].apply(clean_text)
-    print(f"  ✓ 清洗文本字段完成")
+    print(f"清洗文本字段完成")
 
     # 导出为TSV格式
     print("\n[3.6] 导出为TSV格式...")
@@ -278,8 +278,8 @@ def preprocess_and_export(input_json_path, output_txt_path='./data/bilibili_week
     
     df_export = df[feature_order]
     df_export.to_csv(output_txt_path, sep='\t', index=False, header=False, encoding='utf-8')
-    print(f"  ✓ 共生成 {len(df)} 条结构化记录")
-    print(f"  ✓ 导出至: {output_txt_path}")
+    print(f"共生成 {len(df)} 条结构化记录")
+    print(f"导出至: {output_txt_path}")
 
 
 # ==========================================
@@ -308,9 +308,9 @@ if __name__ == '__main__':
     preprocess_and_export(merged_json, output_txt)
 
     print("\n" + "="*50)
-    print("✓ 所有数据处理步骤完成！")
+    print("所有数据处理步骤完成！")
     print("="*50)
     print(f"\n输出文件位置:")
-    print(f"  • 正样本合并: {os.path.join(data_dir, '正样本')}/*.json")
-    print(f"  • 正负样本合并: {merged_json}")
-    print(f"  • 最终TSV: {output_txt}")
+    print(f"正样本合并: {os.path.join(data_dir, '正样本')}/*.json")
+    print(f"正负样本合并: {merged_json}")
+    print(f"最终TSV: {output_txt}")

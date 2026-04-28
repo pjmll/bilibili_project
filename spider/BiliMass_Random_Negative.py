@@ -38,7 +38,7 @@ if __name__ == '__main__':
     OUTPUT_FILE = './data/负样本/负样本数据集_普通视频.json'
     os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
 
-    # 全站 70+ 个细分子分区的 RID 列表
+    # 全站70+个细分子分区的RID列表
     # 涵盖动画、音乐、舞蹈、游戏、知识、科技、生活、美食、汽车、时尚等所有毛细血管
     sub_rids = [
         24, 25, 47, 86, 27, 33, 32, 51, 152,  # 动画/番剧
@@ -53,13 +53,13 @@ if __name__ == '__main__':
         157, 158, 159, 192  # 时尚
     ]
 
-    # 每个子分区只抓最表层的 15 页，确保 100% 不重复
+    # 每个子分区只抓最表层的15页，确保100%不重复
     PAGES_PER_RID = 15
 
-    negative_samples = {}  # 直接用字典按 bvid 去重收集
+    negative_samples = {}  # 直接用字典按bvid去重收集
 
     for rid in sub_rids:
-        print(f"抓取细分 RID: {rid} ...", end=" ")
+        print(f"抓取细分RID: {rid} ...", end=" ")
         success_count = 0
         for page in range(1, PAGES_PER_RID + 1):
             status, archives = get_ordinary_videos(rid, page)
@@ -88,7 +88,7 @@ if __name__ == '__main__':
                         'data_source': 'negative_sample'
                     }
                     success_count += 1
-            time.sleep(1)  # 轻微休眠
+            time.sleep(1)  #轻微休眠
         print(f"获取 {success_count} 条。目前总库: {len(negative_samples)} 条不重复数据")
 
     # 写入文件
